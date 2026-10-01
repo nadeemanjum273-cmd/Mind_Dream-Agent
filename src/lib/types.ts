@@ -14,7 +14,7 @@ export interface OrderRecord {
   items: string;
   totalPrice: number;
   purchaseDate: string;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Returned' | 'Cancelled';
+  status: 'Processing' | 'Shipped' | 'Delivered' | 'Returned' | 'Cancelled' | 'Return Approved';
   shippingAddress: string;
 }
 
@@ -27,6 +27,7 @@ export interface RefundRecord {
   returnWindowDays: number;
   daysElapsed: number;
   isEligible: boolean;
+  status: 'Pending' | 'Return Approved' | 'Rejected' | 'Refund Completed';
   reason: string;
 }
 
@@ -34,13 +35,14 @@ export interface BankDetailRecord {
   refundId: string;
   orderId: string;
   customerName: string;
+  mobile: string;
   bankName: string;
   accountNumber: string;
   routingNumber: string;
   accountHolderName: string;
   amount: number;
   timestamp: string;
-  status: 'Pending' | 'Verified' | 'Processed';
+  status: 'Pending' | 'Verified' | 'Processed' | 'Return Approved';
 }
 
 export interface ChatMessage {

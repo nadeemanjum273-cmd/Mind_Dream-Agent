@@ -14,11 +14,11 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 ];
 
 const QUICK_PROMPTS = [
+  { label: '💻 Tell me laptop dell', query: 'tell me laptop dell' },
+  { label: '🔍 Refund me (ORD-6520)', query: 'refund me for order ORD-6520' },
+  { label: '📱 Samsung S25 Ultra', query: 'tell me about Samsung Galaxy S25 Ultra' },
+  { label: '💳 Submit Bank & Mobile', query: 'My bank is Chase, Account 987654321, Routing 122000031, Mobile +1-555-019-2834 for Alex Johnson' },
   { label: '📋 Return Policy', query: 'What is the return policy for electronics vs regular items?' },
-  { label: '🔍 Check Refund ORD-9021', query: 'Check refund eligibility for Order ID ORD-9021' },
-  { label: '🛍️ Buy DreamPad Laptop', query: 'I want to buy the DreamPad Pro Laptop 16-inch for $1299.99' },
-  { label: '💳 Submit Refund Bank Info', query: 'I qualify for a refund on ORD-9021. My bank is Chase, Account 987654321, Routing 122000031 under Alex Johnson.' },
-  { label: '🚚 Shipping Rates & Speeds', query: 'What are the shipping options, prices, and cutoff times?' },
 ];
 
 export const ChatInterface: React.FC = () => {

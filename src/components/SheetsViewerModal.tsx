@@ -116,7 +116,7 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
             }`}
           >
             <ShoppingCart className="w-4 h-4 text-sky-500" />
-            <span>Portion 1: Orders</span>
+            <span>Portion 1: Orders / Products</span>
             <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-600 font-bold">
               {orders.length}
             </span>
@@ -146,7 +146,7 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
             }`}
           >
             <CreditCard className="w-4 h-4 text-emerald-500" />
-            <span>Portion 3: Bank Details</span>
+            <span>Portion 3: Bank_details</span>
             <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-600 font-bold">
               {bankDetails.length}
             </span>
@@ -161,10 +161,10 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-slate-800">
-                  Portion 1 — Customer Product Orders & Lookup
+                  Portion 1 — Products & Customer Orders
                 </h3>
                 <span className="text-xs text-slate-500">
-                  Updated automatically when chatbot places an order or checks stock
+                  Updated in real-time upon order placement and product lookups
                 </span>
               </div>
               
@@ -192,6 +192,7 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
                         <td className="p-3 text-slate-500">{ord.purchaseDate}</td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 text-[11px] font-semibold rounded-full ${
+                            ord.status === 'Return Approved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
                             ord.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                             ord.status === 'Returned' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                             'bg-blue-50 text-blue-700 border border-blue-200'
@@ -212,10 +213,10 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-slate-800">
-                  Portion 2 — Refund Eligibility & Purchase Timeframes
+                  Portion 2 — Refund Eligibility & Status Validation
                 </h3>
                 <span className="text-xs text-slate-500">
-                  Rules: Standard items (30 days) | Electronics (15 days)
+                  Return Window: Electronics (15 days) &bull; Standard items (30 days)
                 </span>
               </div>
 
@@ -229,7 +230,7 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
                       <th className="p-3">Purchase Date</th>
                       <th className="p-3">Allowed Window</th>
                       <th className="p-3">Days Elapsed</th>
-                      <th className="p-3">Eligible?</th>
+                      <th className="p-3">Status</th>
                       <th className="p-3">Details / Reason</th>
                     </tr>
                   </thead>
@@ -244,11 +245,11 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
                         <td className="p-3 font-semibold text-slate-800">{ref.daysElapsed} d</td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 text-[11px] font-semibold rounded-full ${
-                            ref.isEligible
+                            ref.status === 'Return Approved' || ref.isEligible
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : 'bg-rose-50 text-rose-700 border border-rose-200'
                           }`}>
-                            {ref.isEligible ? 'YES (Eligible)' : 'NO (Expired)'}
+                            {ref.status || (ref.isEligible ? 'Return Approved' : 'Rejected')}
                           </span>
                         </td>
                         <td className="p-3 text-slate-500 max-w-xs truncate">{ref.reason}</td>
@@ -265,10 +266,10 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-slate-800">
-                  Portion 3 — Refund Bank Details Payout Queue
+                  Portion 3 — Bank_details Sheet Tab (Refund Payout Queue)
                 </h3>
                 <span className="text-xs text-slate-500">
-                  Real-time entry logged by AI Agent when refund is qualified
+                  Auto-populated with Bank & Mobile details when refund is Return Approved
                 </span>
               </div>
 
@@ -279,6 +280,7 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
                       <th className="p-3">Refund ID</th>
                       <th className="p-3">Order ID</th>
                       <th className="p-3">Customer Name</th>
+                      <th className="p-3">Mobile Number</th>
                       <th className="p-3">Bank Name</th>
                       <th className="p-3">Account Number</th>
                       <th className="p-3">Routing / IFSC</th>
@@ -293,14 +295,15 @@ export const SheetsViewerModal: React.FC<SheetsViewerModalProps> = ({ isOpen, on
                         <td className="p-3 font-mono font-bold text-emerald-700">{b.refundId}</td>
                         <td className="p-3 font-mono text-slate-700">{b.orderId}</td>
                         <td className="p-3 font-medium text-slate-900">{b.customerName}</td>
+                        <td className="p-3 font-mono text-slate-600">{b.mobile || '+1-555-019-2834'}</td>
                         <td className="p-3 text-slate-700 font-medium">{b.bankName}</td>
                         <td className="p-3 font-mono text-slate-600">{b.accountNumber}</td>
                         <td className="p-3 font-mono text-slate-500">{b.routingNumber}</td>
                         <td className="p-3 font-bold text-emerald-600">${b.amount.toFixed(2)}</td>
                         <td className="p-3 text-slate-400">{b.timestamp}</td>
                         <td className="p-3">
-                          <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            {b.status}
+                          <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            {b.status || 'Return Approved'}
                           </span>
                         </td>
                       </tr>
