@@ -89,7 +89,7 @@ let localBankDetails: BankDetailRecord[] = [
 // Available catalog products for checking pricing and placing new orders
 export const CATALOG_PRODUCTS = [
   { id: 'PROD-101', name: 'DreamPad Pro Laptop 16-inch', category: 'Electronics', price: 1299.99, stock: 15, description: 'High-performance laptop with 1-year warranty' },
-  { id: 'PROD-102', name: 'Mind_Dreams Smart Phone Ultra', category: 'Electronics', price: 899.00, stock: 24, description: 'Flagship smartphone with OLED display' },
+  { id: 'PROD-102', name: 'Mind_Dreams Smart Phone Ultra / Samsung S25', category: 'Electronics', price: 899.00, stock: 24, description: 'Flagship smartphone with OLED display' },
   { id: 'PROD-103', name: 'Mind_Dreams Wireless Noise-Canceling Earbuds', category: 'Electronics', price: 149.99, stock: 50, description: 'Active noise cancelling wireless earbuds' },
   { id: 'PROD-104', name: 'DreamStation Ergonomic Chair', category: 'Furniture', price: 349.50, stock: 8, description: 'Mesh lumbar support office chair' },
   { id: 'PROD-105', name: 'DreamSleep Smart Pillow', category: 'Bedding', price: 79.99, stock: 40, description: 'Memory foam pillow with cooling gel' },
@@ -117,24 +117,6 @@ export function getGoogleSheetsClient() {
   return { sheets: google.sheets({ version: 'v4', auth }), sheetId };
 }
 
-/**
- * Helper to resolve dynamic sheet titles (e.g. "Orders" vs "Product", "Refund Eligibility" vs "Refund", "Bank Details" vs "Bank details")
- */
-export async function getSheetTabNames(client: any, sheetId: string): Promise<{ ordersTab: string; refundTab: string; bankTab: string }> {
-  try {
-    const meta = await client.sheets.spreadsheets.get({ spreadsheetId: sheetId });
-    const titles: string[] = (meta.data.sheets || []).map((s: any) => s.properties?.title || '');
-    
-    const ordersTab = titles.find(t => t.toLowerCase().includes('order') || t.toLowerCase().includes('product')) || 'Orders';
-    const refundTab = titles.find(t => t.toLowerCase().includes('refund')) || 'Refund Eligibility';
-    const bankTab = titles.find(t => t.toLowerCase().includes('bank')) || 'Bank Details';
-
-    return { ordersTab, refundTab, bankTab };
-  } catch (err) {
-    return { ordersTab: 'Orders', refundTab: 'Refund Eligibility', bankTab: 'Bank Details' };
-  }
-}
-
 export function checkSheetsConfig(): SheetsSyncStatus {
   const client = getGoogleSheetsClient();
   return {
@@ -150,16 +132,35 @@ export function checkSheetsConfig(): SheetsSyncStatus {
 }
 
 /**
- * Portion 1: "Orders" — Read & Write
+ * Helper to resolve dynamic sheet titles (e.g. "Orders" vs "Product", "Refund Eligibility" vs "Refund", "Bank Details" vs "Bank details")
+ */
+async function getSheetTabNames(client: any, sheetId: string): Promise<{ ordersTab: string; refundTab: string; bankTab: string }> {
+  try {
+    const meta = await client.sheets.spreadsheets.get({ spreadsheetId: sheetId });
+    const titles: string[] = (meta.data.sheets || []).map((s: any) => s.properties?.title || '');
+    
+    const ordersTab = titles.find(t => t.toLowerCase().includes('product') || t.toLowerCase().includes('order')) || 'Orders';
+    const refundTab = titles.find(t => t.toLowerCase().includes('refund')) || 'Refund Eligibility';
+    const bankTab = titles.find(t => t.toLowerCase().includes('bank')) || 'Bank Details';
+
+    return { ordersTab, refundTab, bankTab };
+  } catch (err) {
+    return { ordersTab: 'Orders', refundTab: 'Refund Eligibility', bankTab: 'Bank Details' };
+  }
+}
+
+/**
+ * Portion 1: "Orders / Products" — Read & Write
  */
 export async function getOrdersFromSheet(): Promise<OrderRecord[]> {
   const client = getGoogleSheetsClient();
   if (!client) return localOrders;
 
   try {
+    const tabs = await getSheetTabNames(client.sheets, client.sheetId);
     const res = await client.sheets.spreadsheets.values.get({
       spreadsheetId: client.sheetId,
-      range: 'Orders!A2:H100',
+      range: `'${tabs.ordersTab}'!A2:H100`,
     });
 
     const rows = res.data.values;
@@ -179,7 +180,7 @@ export async function getOrdersFromSheet(): Promise<OrderRecord[]> {
     localOrders = fetched;
     return fetched;
   } catch (err) {
-    console.error('Error fetching Orders from Google Sheets, using fallback store:', err);
+    console.error('Error fetching Orders from Google Sheets, using reactive store:', err);
     return localOrders;
   }
 }
@@ -198,11 +199,12 @@ export async function addOrderToSheet(order: Omit<OrderRecord, 'orderId' | 'purc
 
   localOrders.unshift(newOrder);
 
-  // Auto add to Refund Eligibility sheet as well
+  // Auto add to Refund Eligibility as well
   const isElectronics = newOrder.items.toLowerCase().includes('laptop') || 
                         newOrder.items.toLowerCase().includes('phone') || 
                         newOrder.items.toLowerCase().includes('tablet') || 
-                        newOrder.items.toLowerCase().includes('earbuds');
+                        newOrder.items.toLowerCase().includes('earbuds') ||
+                        newOrder.items.toLowerCase().includes('samsung');
   
   const refundEntry: RefundRecord = {
     orderId: newOrder.orderId,
@@ -220,9 +222,10 @@ export async function addOrderToSheet(order: Omit<OrderRecord, 'orderId' | 'purc
   const client = getGoogleSheetsClient();
   if (client) {
     try {
+      const tabs = await getSheetTabNames(client.sheets, client.sheetId);
       await client.sheets.spreadsheets.values.append({
         spreadsheetId: client.sheetId,
-        range: 'Orders!A:H',
+        range: `'${tabs.ordersTab}'!A:H`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [
@@ -242,7 +245,7 @@ export async function addOrderToSheet(order: Omit<OrderRecord, 'orderId' | 'purc
 
       await client.sheets.spreadsheets.values.append({
         spreadsheetId: client.sheetId,
-        range: 'Refund Eligibility!A:I',
+        range: `'${tabs.refundTab}'!A:I`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [
@@ -269,7 +272,7 @@ export async function addOrderToSheet(order: Omit<OrderRecord, 'orderId' | 'purc
 }
 
 /**
- * Portion 2: "Refund Eligibility" — Read & Check
+ * Portion 2: "Refund Eligibility / Refund" — Read & Check
  */
 export async function checkRefundEligibilityFromSheet(
   orderId: string,
@@ -295,7 +298,8 @@ export async function checkRefundEligibilityFromSheet(
   const isElectronics = targetOrder.items.toLowerCase().includes('laptop') ||
                         targetOrder.items.toLowerCase().includes('phone') ||
                         targetOrder.items.toLowerCase().includes('tablet') ||
-                        targetOrder.items.toLowerCase().includes('earbuds');
+                        targetOrder.items.toLowerCase().includes('earbuds') ||
+                        targetOrder.items.toLowerCase().includes('samsung');
 
   const maxWindow = isElectronics ? 15 : 30;
   const isEligible = daysElapsed <= maxWindow && targetOrder.status !== 'Returned' && targetOrder.status !== 'Cancelled';
@@ -321,7 +325,6 @@ export async function checkRefundEligibilityFromSheet(
     reason,
   };
 
-  // Update local memory
   const idx = localRefundEligibility.findIndex(r => r.orderId === targetOrder.orderId);
   if (idx >= 0) {
     localRefundEligibility[idx] = record;
@@ -337,9 +340,10 @@ export async function getRefundEligibilityList(): Promise<RefundRecord[]> {
   if (!client) return localRefundEligibility;
 
   try {
+    const tabs = await getSheetTabNames(client.sheets, client.sheetId);
     const res = await client.sheets.spreadsheets.values.get({
       spreadsheetId: client.sheetId,
-      range: 'Refund Eligibility!A2:I100',
+      range: `'${tabs.refundTab}'!A2:I100`,
     });
     const rows = res.data.values;
     if (!rows || rows.length === 0) return localRefundEligibility;
@@ -375,7 +379,7 @@ export async function addBankDetailsToSheet(details: {
 }): Promise<BankDetailRecord> {
   const orders = await getOrdersFromSheet();
   const targetOrder = orders.find(o => o.orderId.toLowerCase() === details.orderId.toLowerCase());
-  const refundAmount = details.amount || (targetOrder ? targetOrder.totalPrice : 149.99);
+  const refundAmount = details.amount || (targetOrder ? targetOrder.totalPrice : 1299.99);
 
   const record: BankDetailRecord = {
     refundId: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -392,7 +396,6 @@ export async function addBankDetailsToSheet(details: {
 
   localBankDetails.unshift(record);
 
-  // Update order status to Returned
   if (targetOrder) {
     targetOrder.status = 'Returned';
   }
@@ -400,9 +403,10 @@ export async function addBankDetailsToSheet(details: {
   const client = getGoogleSheetsClient();
   if (client) {
     try {
+      const tabs = await getSheetTabNames(client.sheets, client.sheetId);
       await client.sheets.spreadsheets.values.append({
         spreadsheetId: client.sheetId,
-        range: 'Bank Details!A:J',
+        range: `'${tabs.bankTab}'!A:J`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [
@@ -434,9 +438,10 @@ export async function getBankDetailsFromSheet(): Promise<BankDetailRecord[]> {
   if (!client) return localBankDetails;
 
   try {
+    const tabs = await getSheetTabNames(client.sheets, client.sheetId);
     const res = await client.sheets.spreadsheets.values.get({
       spreadsheetId: client.sheetId,
-      range: 'Bank Details!A2:J100',
+      range: `'${tabs.bankTab}'!A2:J100`,
     });
     const rows = res.data.values;
     if (!rows || rows.length === 0) return localBankDetails;
@@ -460,46 +465,45 @@ export async function getBankDetailsFromSheet(): Promise<BankDetailRecord[]> {
 }
 
 /**
- * Automatic Sheet Seeder Helper for setting up clean headers in Google Sheet
+ * Automatic Sheet Seeder Helper
  */
 export async function seedGoogleSheetHeaders(): Promise<{ success: boolean; message: string }> {
   const client = getGoogleSheetsClient();
   if (!client) {
-    return { success: false, message: 'Google Sheets credentials not set in environment variables.' };
+    return { success: false, message: 'Google Sheets credentials not set.' };
   }
 
   try {
-    // 1. Portion 1: Orders
+    const tabs = await getSheetTabNames(client.sheets, client.sheetId);
+
     await client.sheets.spreadsheets.values.update({
       spreadsheetId: client.sheetId,
-      range: 'Orders!A1:H1',
+      range: `'${tabs.ordersTab}'!A1:H1`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [['Order ID', 'Customer Name', 'Email', 'Items', 'Total Price ($)', 'Purchase Date', 'Status', 'Shipping Address']],
       },
     });
 
-    // 2. Portion 2: Refund Eligibility
     await client.sheets.spreadsheets.values.update({
       spreadsheetId: client.sheetId,
-      range: 'Refund Eligibility!A1:I1',
+      range: `'${tabs.refundTab}'!A1:I1`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [['Order ID', 'Customer Name', 'Email', 'Product Type', 'Purchase Date', 'Return Window (Days)', 'Days Elapsed', 'Eligible?', 'Reason / Details']],
       },
     });
 
-    // 3. Portion 3: Bank Details
     await client.sheets.spreadsheets.values.update({
       spreadsheetId: client.sheetId,
-      range: 'Bank Details!A1:J1',
+      range: `'${tabs.bankTab}'!A1:J1`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [['Refund ID', 'Order ID', 'Customer Name', 'Bank Name', 'Account Number', 'Routing Number', 'Account Holder', 'Amount ($)', 'Timestamp', 'Status']],
       },
     });
 
-    return { success: true, message: 'Successfully initialized all 3 portions in your Google Sheet!' };
+    return { success: true, message: 'Successfully seeded Google Sheet headers!' };
   } catch (err: any) {
     return { success: false, message: `Failed to seed Google Sheet: ${err.message}` };
   }
